@@ -1,6 +1,360 @@
 /// <reference types="@digitalpersona/websdk" />
 /// <reference types="@digitalpersona/fingerprint" />
 
+// Webcam Face Detection Class
+class WebcamDetection {
+    constructor() {
+        this.faceMesh = null;
+        this.webcamRunning = false;
+        this.video = null;
+        this.canvas = null;
+        this.canvasCtx = null;
+        this.videoWidth = 480;
+        this.isInitializing = false;
+        this.isReady = false;
+        
+        // Wait for MediaPipe to load before initializing
+        this.waitForMediaPipe();
+    }
+
+    async waitForMediaPipe() {
+        this.updateLoadingStatus("Loading MediaPipe...");
+        this.isInitializing = true;
+        
+        // Wait for MediaPipe to be available
+        let attempts = 0;
+        const maxAttempts = 100; // 10 seconds max wait
+        
+        while (typeof FaceMesh === 'undefined' && attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        if (typeof FaceMesh === 'undefined') {
+            this.updateLoadingStatus("Failed to load MediaPipe", true);
+            this.isInitializing = false;
+            return;
+        }
+        
+        this.initializeMediaPipe();
+    }
+
+    async initializeMediaPipe() {
+        try {
+            this.updateLoadingStatus("Initializing Face Mesh...");
+            
+            // Initialize video and canvas elements
+            this.video = document.getElementById("webcam");
+            this.canvas = document.getElementById("output_canvas");
+            this.canvasCtx = this.canvas.getContext("2d");
+
+            this.faceMesh = new FaceMesh({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`;
+                }
+            });
+
+            this.faceMesh.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            this.faceMesh.onResults(this.onResults.bind(this));
+
+            this.isReady = true;
+            this.isInitializing = false;
+            this.updateLoadingStatus("MediaPipe Ready!", false, true);
+            
+            console.log("MediaPipe Face Mesh initialized successfully");
+        } catch (error) {
+            console.error("Failed to initialize MediaPipe:", error);
+            this.updateLoadingStatus(`Failed to initialize: ${error.message}`, true);
+            this.isInitializing = false;
+            this.isReady = false;
+        }
+    }
+
+    onResults(results) {
+        // Set canvas size to match video container
+        this.resizeCanvas();
+        
+        // Clear the canvas
+        this.canvasCtx.save();
+        this.canvasCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.canvasCtx.drawImage(results.image, 0, 0, this.canvas.width, this.canvas.height);
+
+        if (results.multiFaceLandmarks) {
+            for (const landmarks of results.multiFaceLandmarks) {
+                // Draw face mesh
+                drawConnectors(this.canvasCtx, landmarks, FACEMESH_TESSELATION, 
+                    {color: '#C0C0C070', lineWidth: 1});
+                drawConnectors(this.canvasCtx, landmarks, FACEMESH_RIGHT_EYE, 
+                    {color: '#FF3030'});
+                drawConnectors(this.canvasCtx, landmarks, FACEMESH_RIGHT_EYEBROW, 
+                    {color: '#FF3030'});
+                drawConnectors(this.canvasCtx, landmarks, FACEMESH_LEFT_EYE, 
+                    {color: '#30FF30'});
+                drawConnectors(this.canvasCtx, landmarks, FACEMESH_LEFT_EYEBROW, 
+                    {color: '#30FF30'});
+                drawConnectors(this.canvasCtx, landmarks, FACEMESH_FACE_OVAL, 
+                    {color: '#E0E0E0'});
+                drawConnectors(this.canvasCtx, landmarks, FACEMESH_LIPS, 
+                    {color: '#E0E0E0'});
+                drawConnectors(this.canvasCtx, landmarks, FACEMESH_RIGHT_IRIS, 
+                    {color: '#FF3030'});
+                drawConnectors(this.canvasCtx, landmarks, FACEMESH_LEFT_IRIS, 
+                    {color: '#30FF30'});
+            }
+        }
+        this.canvasCtx.restore();
+
+        // Update face detection info
+        this.updateFaceDetectionInfo(results);
+    }
+
+    resizeCanvas() {
+        const videoContainer = this.canvas.parentElement;
+        const containerRect = videoContainer.getBoundingClientRect();
+        
+        // Ensure 16:9 aspect ratio
+        const containerWidth = containerRect.width;
+        const containerHeight = containerWidth * (9 / 16);
+        
+        // Set canvas size to match 16:9 container
+        this.canvas.width = containerWidth;
+        this.canvas.height = containerHeight;
+        
+        // Ensure canvas styles match
+        this.canvas.style.width = containerWidth + 'px';
+        this.canvas.style.height = containerHeight + 'px';
+    }
+
+    updateFaceDetectionInfo(results) {
+        const videoBlendShapes = document.getElementById("video-blend-shapes");
+        
+        if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+            videoBlendShapes.innerHTML = `
+                <li class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
+                    <i class="fas fa-face-smile"></i>
+                    <span>No face detected</span>
+                </li>
+            `;
+            return;
+        }
+
+        // Create simple face metrics from landmarks
+        const landmarks = results.multiFaceLandmarks[0];
+        const faceMetrics = this.calculateFaceMetrics(landmarks);
+        
+        let htmlMaker = "";
+        Object.entries(faceMetrics).forEach(([key, value]) => {
+            const percentage = Math.round(value * 100);
+            htmlMaker += `
+                <li class="blend-shapes-item">
+                    <span class="blend-shapes-label">${key}</span>
+                    <span class="blend-shapes-value">${value.toFixed(3)}</span>
+                </li>
+            `;
+        });
+
+        videoBlendShapes.innerHTML = htmlMaker;
+    }
+
+    calculateFaceMetrics(landmarks) {
+        // Calculate basic face metrics from landmarks
+        const leftEye = landmarks[33]; // Left eye outer corner
+        const rightEye = landmarks[362]; // Right eye outer corner
+        const nose = landmarks[1]; // Nose tip
+        const mouth = landmarks[13]; // Mouth center
+        
+        // Calculate distances for basic metrics
+        const eyeDistance = Math.sqrt(
+            Math.pow(rightEye.x - leftEye.x, 2) + 
+            Math.pow(rightEye.y - leftEye.y, 2)
+        );
+        
+        const faceHeight = Math.abs(landmarks[10].y - landmarks[152].y); // Top to bottom
+        const faceWidth = Math.abs(landmarks[234].x - landmarks[454].x); // Left to right
+        
+        return {
+            "Face Width": Math.min(faceWidth, 1),
+            "Face Height": Math.min(faceHeight, 1),
+            "Eye Distance": Math.min(eyeDistance, 1),
+            "Nose Position": Math.min(Math.abs(nose.x - 0.5) * 2, 1),
+            "Mouth Position": Math.min(Math.abs(mouth.x - 0.5) * 2, 1),
+            "Face Tilt": Math.min(Math.abs(rightEye.y - leftEye.y) * 10, 1)
+        };
+    }
+
+    updateLoadingStatus(message, isError = false, isSuccess = false) {
+        const enableBtn = document.getElementById("enableWebcamBtn");
+        const disableBtn = document.getElementById("disableWebcamBtn");
+        const retryBtn = document.getElementById("retryMediaPipeBtn");
+        
+        if (isError) {
+            enableBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error Loading MediaPipe';
+            enableBtn.disabled = true;
+            enableBtn.style.backgroundColor = 'var(--danger-color)';
+            if (retryBtn) {
+                retryBtn.style.display = 'inline-flex';
+            }
+        } else if (isSuccess) {
+            enableBtn.innerHTML = '<i class="fas fa-play"></i> Enable Webcam';
+            enableBtn.disabled = false;
+            enableBtn.style.backgroundColor = '';
+            if (retryBtn) {
+                retryBtn.style.display = 'none';
+            }
+        } else {
+            enableBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + message;
+            enableBtn.disabled = true;
+            enableBtn.style.backgroundColor = 'var(--secondary-color)';
+            if (retryBtn) {
+                retryBtn.style.display = 'none';
+            }
+        }
+        
+        // Log the status
+        if (window.fingerprintDemo) {
+            const logType = isError ? 'error' : isSuccess ? 'success' : 'info';
+            window.fingerprintDemo.log(`MediaPipe: ${message}`, logType);
+        }
+    }
+
+    // Method to retry MediaPipe initialization
+    async retryInitialization() {
+        if (this.isInitializing) {
+            return; // Already initializing
+        }
+        
+        this.isReady = false;
+        this.faceMesh = null;
+        
+        if (window.fingerprintDemo) {
+            window.fingerprintDemo.log("Retrying MediaPipe initialization...", 'info');
+        }
+        
+        await this.waitForMediaPipe();
+    }
+
+    hasGetUserMedia() {
+        return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    }
+
+    async enableWebcam() {
+        // Check if MediaPipe is still initializing
+        if (this.isInitializing) {
+            console.log("MediaPipe is still initializing, please wait...");
+            if (window.fingerprintDemo) {
+                window.fingerprintDemo.log("MediaPipe is still initializing, please wait...", 'warning');
+            }
+            return;
+        }
+
+        // Check if MediaPipe failed to load
+        if (!this.isReady || !this.faceMesh) {
+            console.log("MediaPipe failed to initialize properly. Please refresh the page.");
+            if (window.fingerprintDemo) {
+                window.fingerprintDemo.log("MediaPipe failed to initialize. Please refresh the page.", 'error');
+            }
+            return;
+        }
+
+        if (this.webcamRunning === true) {
+            this.webcamRunning = false;
+            this.stopWebcam();
+            return;
+        }
+
+        this.webcamRunning = true;
+        this.updateWebcamUI(true);
+
+        try {
+            if (window.fingerprintDemo) {
+                window.fingerprintDemo.log("Requesting webcam access...", 'info');
+            }
+            
+            // Set initial canvas size
+            this.resizeCanvas();
+            
+            // Set up camera with 16:9 aspect ratio (common resolutions)
+            // Use 1280x720 (HD) or 1920x1080 (Full HD) for best quality
+            const camera = new Camera(this.video, {
+                onFrame: async () => {
+                    await this.faceMesh.send({image: this.video});
+                },
+                width: 1280,
+                height: 720
+            });
+            
+            camera.start();
+            
+            // Add resize listener to handle window resizing
+            window.addEventListener('resize', () => {
+                if (this.webcamRunning) {
+                    this.resizeCanvas();
+                }
+            });
+            
+            if (window.fingerprintDemo) {
+                window.fingerprintDemo.log("Webcam loaded, starting face detection...", 'success');
+            }
+        } catch (error) {
+            console.error("Error accessing webcam:", error);
+            if (window.fingerprintDemo) {
+                window.fingerprintDemo.log(`Webcam access failed: ${error.message}`, 'error');
+            }
+            this.webcamRunning = false;
+            this.updateWebcamUI(false);
+        }
+    }
+
+    stopWebcam() {
+        if (this.video && this.video.srcObject) {
+            const tracks = this.video.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+            this.video.srcObject = null;
+            
+            if (window.fingerprintDemo) {
+                window.fingerprintDemo.log("Webcam stopped", 'info');
+            }
+        }
+        
+        // Clear the canvas
+        if (this.canvasCtx) {
+            this.canvasCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+        
+        // Clear blend shapes
+        const videoBlendShapes = document.getElementById("video-blend-shapes");
+        if (videoBlendShapes) {
+            videoBlendShapes.innerHTML = `
+                <li class="empty-state">
+                    <i class="fas fa-face-smile"></i>
+                    <span>Face metrics will appear here during detection</span>
+                </li>
+            `;
+        }
+        
+        this.updateWebcamUI(false);
+    }
+
+    updateWebcamUI(running) {
+        const enableBtn = document.getElementById("enableWebcamBtn");
+        const disableBtn = document.getElementById("disableWebcamBtn");
+        
+        if (running) {
+            enableBtn.style.display = "none";
+            disableBtn.style.display = "inline-flex";
+        } else {
+            enableBtn.style.display = "inline-flex";
+            disableBtn.style.display = "none";
+        }
+    }
+}
+
 class FingerprintDemo {
     constructor() {
         this.api = null;
@@ -11,10 +365,15 @@ class FingerprintDemo {
         this.debugMode = false;
         this.currentDeviceInfo = null;
         this.realQualityReceived = false;
+        this.webcamDetection = null;
+        this.currentMode = 'fingerprint'; // 'fingerprint' or 'webcam'
         
         this.initializeAPI();
         this.setupEventListeners();
         this.log('Application initialized', 'info');
+        
+        // Initialize webcam detection
+        this.webcamDetection = new WebcamDetection();
     }
 
     initializeAPI() {
@@ -141,6 +500,26 @@ class FingerprintDemo {
 
         document.getElementById('exportDeviceInfoBtn').addEventListener('click', () => {
             this.exportDeviceInfo();
+        });
+
+        // Webcam toggle button
+        document.getElementById('webcamToggle').addEventListener('click', () => {
+            this.toggleMode();
+        });
+
+        // Enable webcam button
+        document.getElementById('enableWebcamBtn').addEventListener('click', () => {
+            this.webcamDetection.enableWebcam();
+        });
+
+        // Disable webcam button
+        document.getElementById('disableWebcamBtn').addEventListener('click', () => {
+            this.webcamDetection.stopWebcam();
+        });
+
+        // Retry MediaPipe button
+        document.getElementById('retryMediaPipeBtn').addEventListener('click', () => {
+            this.webcamDetection.retryInitialization();
         });
     }
 
@@ -1219,6 +1598,38 @@ class FingerprintDemo {
         URL.revokeObjectURL(url);
         
         this.log('Device information exported successfully', 'success');
+    }
+
+    toggleMode() {
+        this.currentMode = this.currentMode === 'fingerprint' ? 'webcam' : 'fingerprint';
+        
+        const fingerprintPanels = document.querySelectorAll('.device-panel, .capture-panel, .samples-panel, .events-panel');
+        const webcamPanel = document.getElementById('webcamPanel');
+        const toggleButton = document.getElementById('webcamToggle');
+        
+        if (this.currentMode === 'webcam') {
+            // Hide fingerprint panels
+            fingerprintPanels.forEach(panel => panel.style.display = 'none');
+            // Show webcam panel
+            webcamPanel.style.display = 'block';
+            // Update toggle button
+            toggleButton.innerHTML = '<i class="fas fa-fingerprint"></i><span>Fingerprint Mode</span>';
+            toggleButton.classList.add('active');
+            this.log('Switched to webcam face detection mode', 'info');
+        } else {
+            // Show fingerprint panels
+            fingerprintPanels.forEach(panel => panel.style.display = 'block');
+            // Hide webcam panel
+            webcamPanel.style.display = 'none';
+            // Update toggle button
+            toggleButton.innerHTML = '<i class="fas fa-video"></i><span>Webcam Detection</span>';
+            toggleButton.classList.remove('active');
+            // Stop webcam if running
+            if (this.webcamDetection && this.webcamDetection.webcamRunning) {
+                this.webcamDetection.stopWebcam();
+            }
+            this.log('Switched to fingerprint capture mode', 'info');
+        }
     }
 
 

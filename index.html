@@ -16,9 +16,15 @@
                     <i class="fas fa-fingerprint"></i>
                     <span>Digital Persona Demo</span>
                 </div>
-                <div class="connection-status" id="connectionStatus">
-                    <div class="status-indicator offline" id="statusIndicator"></div>
-                    <span id="statusText">Disconnected</span>
+                <div class="header-controls">
+                    <button class="webcam-toggle" id="webcamToggle">
+                        <i class="fas fa-video"></i>
+                        <span>Webcam Detection</span>
+                    </button>
+                    <div class="connection-status" id="connectionStatus">
+                        <div class="status-indicator offline" id="statusIndicator"></div>
+                        <span id="statusText">Disconnected</span>
+                    </div>
                 </div>
             </div>
         </header>
@@ -132,6 +138,41 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Webcam Face Detection Panel -->
+                <div class="panel webcam-panel" id="webcamPanel" style="display: none;">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-eye"></i> Face Detection</h2>
+                        <div class="webcam-controls">
+                            <button class="btn btn-primary" id="enableWebcamBtn">
+                                <i class="fas fa-play"></i> Enable Webcam
+                            </button>
+                            <button class="btn btn-danger" id="disableWebcamBtn" style="display: none;">
+                                <i class="fas fa-stop"></i> Disable Webcam
+                            </button>
+                            <button class="btn btn-secondary" id="retryMediaPipeBtn" style="display: none;">
+                                <i class="fas fa-redo"></i> Retry MediaPipe
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="webcam-area">
+                            <div class="video-container">
+                                <video id="webcam" autoplay playsinline style="display: none;"></video>
+                                <canvas id="output_canvas" class="output_canvas"></canvas>
+                            </div>
+                            <div class="blend-shapes">
+                                <h4><i class="fas fa-chart-bar"></i> Face Metrics</h4>
+                                <ul class="blend-shapes-list" id="video-blend-shapes">
+                                    <li class="empty-state">
+                                        <i class="fas fa-face-smile"></i>
+                                        <span>Face metrics will appear here during detection</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
 
@@ -185,9 +226,14 @@
         </div>
     </div>
 
+    <!-- Load MediaPipe script for face detection -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils@0.6.1629159505/control_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248257/drawing_utils.js"></script>
     <!-- Load Digital Persona SDK scripts -->
     <script src="https://unpkg.com/@digitalpersona/websdk/dist/websdk.client.ui.js"></script>
     <script src="https://unpkg.com/@digitalpersona/fingerprint/dist/fingerprint.sdk.js"></script>
-    <script type="module" src="./main.js"></script>
+    <script src="./main.js"></script>
 </body>
 </html>

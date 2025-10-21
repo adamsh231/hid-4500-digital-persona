@@ -53,6 +53,43 @@ body {
     align-items: center;
 }
 
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.webcam-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--border-radius);
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    backdrop-filter: blur(10px);
+}
+
+.webcam-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.webcam-toggle.active {
+    background: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.webcam-toggle.active:hover {
+    background: #047857;
+    border-color: #047857;
+}
+
 .logo {
     display: flex;
     align-items: center;
@@ -772,5 +809,190 @@ body {
         padding: 0 1rem;
         grid-template-columns: 1fr;
         gap: 1rem;
+    }
+}
+
+/* Webcam Face Detection Styles */
+.webcam-panel {
+    grid-column: 1 / -1; /* Full width */
+}
+
+.webcam-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.webcam-area {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.video-container {
+    position: relative;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 2px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    height: 0;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio fallback (9/16 = 0.5625) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* Modern browsers with aspect-ratio support */
+@supports (aspect-ratio: 16 / 9) {
+    .video-container {
+        height: auto;
+        padding-bottom: 0;
+    }
+}
+
+#webcam {
+    transform: rotateY(180deg);
+    -webkit-transform: rotateY(180deg);
+    -moz-transform: rotateY(180deg);
+    border-radius: var(--border-radius);
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.output_canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform: rotateY(180deg);
+    -webkit-transform: rotateY(180deg);
+    -moz-transform: rotateY(180deg);
+    pointer-events: none;
+    border-radius: var(--border-radius);
+    width: 100%;
+    height: 100%;
+}
+
+.blend-shapes {
+    background: var(--background-color);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    width: 100%;
+}
+
+.blend-shapes h4 {
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.blend-shapes-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.blend-shapes-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    background: var(--surface-color);
+    border-radius: calc(var(--border-radius) / 2);
+    border: 1px solid var(--border-color);
+    font-size: 0.75rem;
+}
+
+.blend-shapes-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.7rem;
+    text-align: center;
+}
+
+.blend-shapes-value {
+    display: flex;
+    height: 20px;
+    align-items: center;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0 0.5rem;
+    border-radius: 2px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    justify-content: center;
+    width: 100%;
+}
+
+.blend-shapes-list .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.blend-shapes-list .empty-state i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+/* Responsive webcam styles */
+@media (max-width: 1024px) {
+    .blend-shapes-list {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.4rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-controls {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: stretch;
+    }
+    
+    .webcam-toggle {
+        justify-content: center;
+    }
+    
+    .webcam-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .blend-shapes-list {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 0.3rem;
+    }
+    
+    .blend-shapes-item {
+        padding: 0.4rem;
+        font-size: 0.7rem;
+    }
+    
+    .blend-shapes-label {
+        font-size: 0.65rem;
+    }
+    
+    .blend-shapes-value {
+        height: 16px;
+        font-size: 0.6rem;
     }
 }

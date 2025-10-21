@@ -6,6 +6,9 @@ Ref:
 - https://github.com/shanxp/fingerprint-digital-persona-u-are-u-4500-web-example/tree/master
 - https://github.com/hidglobal/digitalpersona-fingerprint/blob/d61f5e9d0d828cf6a0b205971b164f4edf7f4cd2/docs/usage/index.adoc
 
+Ref Face:
+- https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker#configurations_options
+
 ## Features
 
 🔒 **Fingerprint Capture** - Capture fingerprints in multiple formats (PNG, Raw, Intermediate, Compressed)  
