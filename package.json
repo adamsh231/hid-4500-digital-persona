@@ -1,0 +1,19 @@
+{
+  "name": "digital-persona-fingerprint-demo",
+  "version": "1.0.0",
+  "description": "Beautiful demo application for Digital Persona Fingerprint API",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "@digitalpersona/fingerprint": "^6.1.0",
+    "@digitalpersona/websdk": "^6.1.0"
+  },
+  "packageManager": "yarn@1.22.19"
+}

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Persona Fingerprint Demo</title>
+    <link rel="stylesheet" href="./styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-fingerprint"></i>
+                    <span>Digital Persona Demo</span>
+                </div>
+                <div class="connection-status" id="connectionStatus">
+                    <div class="status-indicator offline" id="statusIndicator"></div>
+                    <span id="statusText">Disconnected</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="container">
+                <!-- Device Information Panel -->
+                <div class="panel device-panel">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-laptop"></i> Device Information</h2>
+                        <button class="btn btn-secondary" id="enumerateBtn">
+                            <i class="fas fa-sync-alt"></i> Enumerate Devices
+                        </button>
+                    </div>
+                    <div class="panel-content">
+                        <div class="device-list" id="deviceList">
+                            <div class="empty-state">
+                                <i class="fas fa-search"></i>
+                                <p>Click "Enumerate Devices" to scan for fingerprint readers</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fingerprint Capture Panel -->
+                <div class="panel capture-panel">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-hand-paper"></i> Fingerprint Capture</h2>
+                        <div class="capture-controls">
+                            <select id="sampleFormat" class="select">
+                                <option value="PngImage">PNG Image</option>
+                                <option value="Raw">Raw Data</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Compressed">Compressed</option>
+                            </select>
+                            <button class="btn btn-primary" id="startCaptureBtn">
+                                <i class="fas fa-play"></i> Start Capture
+                            </button>
+                            <button class="btn btn-danger" id="stopCaptureBtn" disabled>
+                                <i class="fas fa-stop"></i> Stop Capture
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="capture-area">
+                            <div class="fingerprint-display" id="fingerprintDisplay">
+                                <div class="placeholder">
+                                    <i class="fas fa-fingerprint"></i>
+                                    <p>Place your finger on the scanner</p>
+                                    <div class="quality-indicator" id="qualityIndicator">
+                                        <div class="quality-bar">
+                                            <div class="quality-fill" id="qualityFill"></div>
+                                        </div>
+                                        <span id="qualityText">Quality: 0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="capture-info" id="captureInfo">
+                                <div class="info-item">
+                                    <label>Samples Captured:</label>
+                                    <span id="sampleCount">0</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Last Quality:</label>
+                                    <span id="lastQuality">N/A</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Format:</label>
+                                    <span id="currentFormat">PNG Image</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sample History Panel -->
+                <div class="panel samples-panel">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-history"></i> Sample History</h2>
+                        <button class="btn btn-outline" id="clearSamplesBtn">
+                            <i class="fas fa-trash"></i> Clear History
+                        </button>
+                    </div>
+                    <div class="panel-content">
+                        <div class="samples-grid" id="samplesGrid">
+                            <div class="empty-state">
+                                <i class="fas fa-images"></i>
+                                <p>Captured fingerprint samples will appear here</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Events Log Panel -->
+                <div class="panel events-panel">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-terminal"></i> Events Log</h2>
+                        <button class="btn btn-outline" id="clearLogBtn">
+                            <i class="fas fa-broom"></i> Clear Log
+                        </button>
+                        <button class="btn btn-outline" id="debugToggleBtn">
+                            <i class="fas fa-bug"></i> Debug Mode
+                        </button>
+                    </div>
+                    <div class="panel-content">
+                        <div class="events-log" id="eventsLog">
+                            <div class="log-entry info">
+                                <span class="timestamp">00:00:00</span>
+                                <span class="message">Application initialized</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Installation Modal -->
+        <div class="modal" id="installModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-download"></i> HID Authentication Device Client Required</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Cannot connect to your fingerprint device. Make sure the device is connected.</p>
+                    <p>If you do not use HID DigitalPersona Workstation or Kiosk, you may need to download and install the HID Authentication Device Client.</p>
+                    <div class="modal-actions">
+                        <a href="https://digitalpersona.hidglobal.com/lite-client/" target="_blank" class="btn btn-primary">
+                            <i class="fas fa-external-link-alt"></i> Download HID ADC
+                        </a>
+                        <button class="btn btn-outline" id="closeModalBtn">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Details Modal -->
+        <div class="modal" id="deviceModal">
+            <div class="modal-content device-modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-laptop"></i> Device Information</h3>
+                    <button class="btn btn-outline close-btn" id="closeDeviceModalBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="device-details" id="deviceDetails">
+                        <!-- Device details will be populated here -->
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" id="testDeviceBtn">
+                        <i class="fas fa-vial"></i> Test Device
+                    </button>
+                    <button class="btn btn-secondary" id="calibrateDeviceBtn">
+                        <i class="fas fa-sliders-h"></i> Calibrate
+                    </button>
+                    <button class="btn btn-outline" id="exportDeviceInfoBtn">
+                        <i class="fas fa-download"></i> Export Info
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Digital Persona SDK scripts -->
+    <script src="https://unpkg.com/@digitalpersona/websdk/dist/websdk.client.ui.js"></script>
+    <script src="https://unpkg.com/@digitalpersona/fingerprint/dist/fingerprint.sdk.js"></script>
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
